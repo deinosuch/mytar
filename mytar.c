@@ -13,22 +13,30 @@ devideRoundUp(int dividend, int divisor){
 	return (dividend % divisor > 0) ? quotient + 1 : quotient;
 }
 
-void
+
+int
+getSizeOfFile(FILE *archive, long int start){
+	fseek(archive, start + SIZE_OFFSET, SEEK_SET);
+	char filesize[MAX_SIZE_LENGTH];
+	fread(filesize, sizeof(filesize[0]), MAX_SIZE_LENGTH, archive);
+	return atoi(filesize);
+}
+
+
+int
 printNameAndSeekToNext(FILE *archive){
 	long int start = ftell(archive);
 	char filename[MAX_NAME_LENGTH];
 	int i = 0;
 
 	while((filename[i] = fgetc(archive)) != '\0') i++;
+	
+	if(i == 0) return 0;
 
 	printf("%s\n", filename);
 
-	fseek(archive, start + SIZE_OFFSET, SEEK_SET);
-	char filesize[MAX_SIZE_LENGTH];
-	fread(filesize, sizeof(filesize[0]), MAX_SIZE_LENGTH, archive);
-	int size = atoi(filesize);
-
-	fseek(archive, start + (devideRoundUp(size, BLOCK_SIZE) + 1) * BLOCK_SIZE, SEEK_SET);
+	fseek(archive, start + (devideRoundUp(getSizeOfFile(archive, start), BLOCK_SIZE) + 1) * BLOCK_SIZE, SEEK_SET);
+	return 1;
 }
 
 int
@@ -40,9 +48,7 @@ main(int argc, char *argv[]){
 		 return 1;
 	}
 	
-	for(int j = 0; j < 5; j++){
-		printNameAndSeekToNext(archive);	
-	}
+	while(printNameAndSeekToNext(archive));	
 
 	fclose(archive);
 }
