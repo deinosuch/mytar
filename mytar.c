@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define MAX_NAME_LENGTH 100
 #define SIZE_OFFSET 124
@@ -43,11 +44,37 @@ int
 main(int argc, char *argv[]){
 	FILE *archive;
 
-	if((archive = fopen(argv[1], "r")) == NULL){
-		 printf("neotevrel jsem se");
-		 return 1;
+	if(argc < 3){
+		fprintf(stderr, "mytar: not enough argumetns");
+		return 2;
 	}
 	
+	char option = 0;
+	for(int i = 1; i < argc; i++){
+		if(!strcmp(argv[i], "-f")){
+			option = 'f';
+			continue;
+		}
+		if(!strcmp(argv[i], "-t")){
+			option = 't';
+		 	continue;
+		}
+		switch(option){
+			case 'f':
+				if((archive = fopen(argv[i], "r")) == NULL){
+					 fprintf(stderr, "mytar: unable to open file\n");
+					 return 2;
+				}
+				option = 0;
+				break;
+			case 't':
+				break;
+			default:
+				fprintf(stderr, "mytar: invalid argument\n");
+				return 2;
+			}
+	}
+
 	while(printNameAndSeekToNext(archive));	
 
 	fclose(archive);
