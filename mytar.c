@@ -35,11 +35,11 @@ struct item *head;
 
 void
 findPrintDelete(struct item **phead, char *filename){
-	struct item *temp = *phead, *prev;
+	struct item *temp = *phead;
+	struct item *prev;
 		
 	if(temp != NULL && !strcmp(temp->value, filename)){
 		*phead = temp->next;
-		free(temp);
 		printf("%s\n", filename);
 		return;
 	}
@@ -51,7 +51,7 @@ findPrintDelete(struct item **phead, char *filename){
 
 	if(temp == NULL) return;
 	
-	printf("%s", filename);
+	printf("%s\n", filename);
 	prev->next = temp->next;
 
 	free(temp);
@@ -77,11 +77,20 @@ printNameAndSeekToNext(FILE *archive, struct item *head, int listAll){
 
 	if(listAll) printf("%s\n", filename);
 	else{
-		if(!head) return 1;
 		findPrintDelete(&head, filename);
+		if(head == NULL) return 1;
+	}
+	
+	fseek(archive, 0L, SEEK_END);
+	long int end = ftell(archive);
+	long int newPos = start + (devideRoundUp(getSizeOfFile(archive, start), BLOCK_SIZE) + 1) * BLOCK_SIZE;
+	if(end < newPos){
+		fprintf(stderr, "mytar: Unexpected EOF in archive\n");
+		fprintf(stderr, "mytar: Error is not recoverable: exiting now\n");
+		return 2;
 	}
 
-	fseek(archive, start + (devideRoundUp(getSizeOfFile(archive, start), BLOCK_SIZE) + 1) * BLOCK_SIZE, SEEK_SET);
+	fseek(archive, newPos, SEEK_SET);
 	return 0;
 }
 
@@ -150,5 +159,26 @@ main(int argc, char *argv[]){
 		return 2;
 	}
 
+	fseek(archive, 0L, SEEK_END);
+	long int end = ftell(archive);
+	fseek(archive, end - 2*BLOCK_SIZE, SEEK_SET);
+	
+	int block1 = 1;
+	int block2 = 1;
+	char c;
+
+	for(int i = 0; i < BLOCK_SIZE; i++){
+		c = fgetc(archive);
+		if(c != 0) block1 = 0;
+	}
+	for(int i = 0; i < BLOCK_SIZE; i++){
+		c = fgetc(archive);
+		if(c != 0) block2 = 0;
+	}
+
+	if(!block1 && block2) fprintf(stderr, "mytar: A lone zero block at %ld\n", end - BLOCK_SIZE);
+
 	fclose(archive);
+
+	return 0;
 }
