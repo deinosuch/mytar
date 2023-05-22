@@ -36,13 +36,18 @@ struct item *head;
 void
 findPrintDelete(struct item **phead, char *filename){
 	struct item *temp = *phead, *prev;
-
+	
+	
+	printf("cum\n");
+	printf("%s\n", temp->value);
 	if(temp != NULL && !strcmp(temp->value, filename)){
+		printf("cum\n");
 		*phead = temp->next;
 		free(temp);
+		printf("%s\n", filename);
 		return;
 	}
-
+	
 	while(temp != NULL && strcmp(temp->value, filename)){
 		prev = temp;
 		temp = temp->next;
@@ -50,7 +55,7 @@ findPrintDelete(struct item **phead, char *filename){
 
 	if(temp == NULL) return;
 	
-	printf("%s\n", filename);
+	printf("%s", filename);
 	prev->next = temp->next;
 
 	free(temp);
@@ -73,9 +78,12 @@ printNameAndSeekToNext(FILE *archive, struct item *head, int listAll){
 		fprintf(stderr, "mytar: Unsupported header type: %d\n", c);
 		return 2;
 	}
-	
+
 	if(listAll) printf("%s\n", filename);
-	else findPrintDelete(&head, filename);
+	else{
+		if(!head) return 1;
+		findPrintDelete(&head, filename);
+	}
 
 	fseek(archive, start + (devideRoundUp(getSizeOfFile(archive, start), BLOCK_SIZE) + 1) * BLOCK_SIZE, SEEK_SET);
 	return 0;
@@ -93,7 +101,6 @@ main(int argc, char *argv[]){
 	char option = 0;
 	
 	int listAll = 1;
-	struct item *current;
 
 	for(int i = 1; i < argc; i++){
 		if(!strcmp(argv[i], "-f")){
@@ -121,14 +128,14 @@ main(int argc, char *argv[]){
 				}
 				p->value = argv[i];
 				p->next = NULL;
-
+				
 				if(head == NULL){
 					head = p;
-					current = p;
 				}
 				else{
+					struct item *current = head;
+					while(current->next != NULL) current = current->next;
 					current->next = p;
-					current = p;
 				}
 				break;
 			default:
@@ -136,9 +143,7 @@ main(int argc, char *argv[]){
 				return 2;
 			}
 	}
-	free(current);
 	
-	printf("dostal jsem se aspon sem");
 	int exit;
 	while(!(exit = printNameAndSeekToNext(archive, head, listAll)));
 	if(exit == 2) return 2;
