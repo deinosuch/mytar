@@ -69,6 +69,15 @@ printNameAndSeekToNext(FILE *archive, int listAll){
 	
 	if(i == 0) return 1;
 	
+	fseek(archive, 0L, SEEK_END);
+	long int end = ftell(archive);
+	long int newPos = start + (devideRoundUp(getSizeOfFile(archive, start), BLOCK_SIZE) + 1) * BLOCK_SIZE;
+	if(end < newPos){
+		fprintf(stderr, "mytar: Unexpected EOF in archive\n");
+		fprintf(stderr, "mytar: Error is not recoverable: exiting now\n");
+		return 2;
+	}
+	
 	fseek(archive, start + TYPEFLAG_OFFSET, SEEK_SET);
 	char c = fgetc(archive);
 	if(c != '0'){
@@ -80,15 +89,6 @@ printNameAndSeekToNext(FILE *archive, int listAll){
 	else{
 		findPrintDelete(filename);
 		if(head == NULL) return 1;
-	}
-	
-	fseek(archive, 0L, SEEK_END);
-	long int end = ftell(archive);
-	long int newPos = start + (devideRoundUp(getSizeOfFile(archive, start), BLOCK_SIZE) + 1) * BLOCK_SIZE;
-	if(end < newPos){
-		fprintf(stderr, "mytar: Unexpected EOF in archive\n");
-		fprintf(stderr, "mytar: Error is not recoverable: exiting now\n");
-		return 2;
 	}
 
 	fseek(archive, newPos, SEEK_SET);
