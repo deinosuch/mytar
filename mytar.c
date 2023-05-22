@@ -36,12 +36,8 @@ struct item *head;
 void
 findPrintDelete(struct item **phead, char *filename){
 	struct item *temp = *phead, *prev;
-	
-	
-	printf("cum\n");
-	printf("%s\n", temp->value);
+		
 	if(temp != NULL && !strcmp(temp->value, filename)){
-		printf("cum\n");
 		*phead = temp->next;
 		free(temp);
 		printf("%s\n", filename);
@@ -143,7 +139,7 @@ main(int argc, char *argv[]){
 				return 2;
 			}
 	}
-	
+
 	int exit;
 	while(!(exit = printNameAndSeekToNext(archive, head, listAll)));
 	if(exit == 2) return 2;
