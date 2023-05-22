@@ -25,27 +25,62 @@ getSizeOfFile(FILE *archive, long int start){
 }
 
 
+struct item{
+	char *value;
+	struct item *next;
+};
+
+struct item *head;
+
+
+void
+findPrintDelete(struct item **phead, char *filename){
+	struct item *temp = *phead, *prev;
+
+	if(temp != NULL && !strcmp(temp->value, filename)){
+		*phead = temp->next;
+		free(temp);
+		return;
+	}
+
+	while(temp != NULL && strcmp(temp->value, filename)){
+		prev = temp;
+		temp = temp->next;
+	}
+
+	if(temp == NULL) return;
+	
+	printf("%s\n", filename);
+	prev->next = temp->next;
+
+	free(temp);
+}
+
+
 int
-printNameAndSeekToNext(FILE *archive){
+printNameAndSeekToNext(FILE *archive, struct item *head, int listAll){
 	long int start = ftell(archive);
 	char filename[MAX_NAME_LENGTH];
 	int i = 0;
 
 	while((filename[i] = fgetc(archive)) != '\0') i++;
 	
-	if(i == 0 ) return 1;
+	if(i == 0) return 1;
 	
 	fseek(archive, start + TYPEFLAG_OFFSET, SEEK_SET);
-	if(fgetc(archive) != '0'){
-		fprintf(stderr, "mytar: unsupported header type\n");
+	char c = fgetc(archive);
+	if(c != '0'){
+		fprintf(stderr, "mytar: Unsupported header type: %d\n", c);
 		return 2;
 	}
-
-	printf("%s\n", filename);
+	
+	if(listAll) printf("%s\n", filename);
+	else findPrintDelete(&head, filename);
 
 	fseek(archive, start + (devideRoundUp(getSizeOfFile(archive, start), BLOCK_SIZE) + 1) * BLOCK_SIZE, SEEK_SET);
 	return 0;
 }
+
 
 int
 main(int argc, char *argv[]){
@@ -55,11 +90,11 @@ main(int argc, char *argv[]){
 		fprintf(stderr, "mytar: not enough argumetns\n");
 		return 2;
 	}
-	
-	//char *files;
-	//int fileCount = 0;
-
 	char option = 0;
+	
+	int listAll = 1;
+	struct item *current;
+
 	for(int i = 1; i < argc; i++){
 		if(!strcmp(argv[i], "-f")){
 			option = 'f';
@@ -78,18 +113,41 @@ main(int argc, char *argv[]){
 				option = 0;
 				break;
 			case 't':
-				//if(fileCount == 0) files = argv[i];
-				//fileCount++;
+				listAll = 0;
+				struct item *p = (struct item *)malloc(sizeof(struct item));
+				if(p == NULL) {
+					fprintf(stderr, "mytar: failed to malloc\n");
+					return 2;
+				}
+				p->value = argv[i];
+				p->next = NULL;
+
+				if(head == NULL){
+					head = p;
+					current = p;
+				}
+				else{
+					current->next = p;
+					current = p;
+				}
 				break;
 			default:
-				fprintf(stderr, "mytar: invalid argument\n");
+				fprintf(stderr, "mytar: Unknown option: -%c\n", option);
 				return 2;
 			}
 	}
+	free(current);
 	
+	printf("dostal jsem se aspon sem");
 	int exit;
-	while(!(exit = printNameAndSeekToNext(archive)));
+	while(!(exit = printNameAndSeekToNext(archive, head, listAll)));
 	if(exit == 2) return 2;
+	
+	if(head != NULL){
+		for(struct item *p = head; p != NULL; p = p->next) fprintf(stderr, "mytar: %s: Not found in archive\n", p->value);
+		fprintf(stderr, "mytar: Exiting with failure status due to previous errors\n");
+		return 2;
+	}
 
 	fclose(archive);
 }
