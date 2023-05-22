@@ -34,12 +34,13 @@ struct item *head;
 
 
 void
-findPrintDelete(struct item **phead, char *filename){
-	struct item *temp = *phead;
+findPrintDelete(char *filename){
+	struct item *temp = head;
 	struct item *prev;
 		
 	if(temp != NULL && !strcmp(temp->value, filename)){
-		*phead = temp->next;
+		head = temp->next;
+		free(temp);
 		printf("%s\n", filename);
 		return;
 	}
@@ -59,7 +60,7 @@ findPrintDelete(struct item **phead, char *filename){
 
 
 int
-printNameAndSeekToNext(FILE *archive, struct item *head, int listAll){
+printNameAndSeekToNext(FILE *archive, int listAll){
 	long int start = ftell(archive);
 	char filename[MAX_NAME_LENGTH];
 	int i = 0;
@@ -77,7 +78,7 @@ printNameAndSeekToNext(FILE *archive, struct item *head, int listAll){
 
 	if(listAll) printf("%s\n", filename);
 	else{
-		findPrintDelete(&head, filename);
+		findPrintDelete(filename);
 		if(head == NULL) return 1;
 	}
 	
@@ -106,6 +107,7 @@ main(int argc, char *argv[]){
 	char option = 0;
 	
 	int listAll = 1;
+	int tOption = 0;
 
 	for(int i = 1; i < argc; i++){
 		if(!strcmp(argv[i], "-f")){
@@ -114,6 +116,7 @@ main(int argc, char *argv[]){
 		}
 		if(!strcmp(argv[i], "-t")){
 			option = 't';
+			tOption++;
 		 	continue;
 		}
 		switch(option){
@@ -123,6 +126,7 @@ main(int argc, char *argv[]){
 					 return 2;
 				}
 				option = 0;
+				if(tOption) option = 't';
 				break;
 			case 't':
 				listAll = 0;
@@ -134,9 +138,7 @@ main(int argc, char *argv[]){
 				p->value = argv[i];
 				p->next = NULL;
 				
-				if(head == NULL){
-					head = p;
-				}
+				if(head == NULL) head = p;
 				else{
 					struct item *current = head;
 					while(current->next != NULL) current = current->next;
@@ -150,7 +152,7 @@ main(int argc, char *argv[]){
 	}
 
 	int exit;
-	while(!(exit = printNameAndSeekToNext(archive, head, listAll)));
+	while((exit = printNameAndSeekToNext(archive, listAll)) == 0);
 	if(exit == 2) return 2;
 	
 	if(head != NULL){
@@ -158,6 +160,8 @@ main(int argc, char *argv[]){
 		fprintf(stderr, "mytar: Exiting with failure status due to previous errors\n");
 		return 2;
 	}
+
+	printf("%d\n", TYPEFLAG_OFFSET);
 
 	fseek(archive, 0L, SEEK_END);
 	long int end = ftell(archive);
